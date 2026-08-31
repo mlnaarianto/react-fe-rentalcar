@@ -2,6 +2,8 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
+import CarDetail from "./pages/CarDetail"; // 👈 Impor halaman CarDetail yang baru dibuat
 import { useAuth } from "./hooks/useAuth";
 
 // Protected Route Component
@@ -28,6 +30,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        
+        {/* Rute Dashboard yang dilindungi */}
         <Route
           path="/dashboard"
           element={
@@ -36,6 +40,27 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Rute Profil yang dilindungi */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Rute Detail Mobil yang dilindungi */}
+        <Route
+          path="/cars/:id"
+          element={
+            <ProtectedRoute>
+              <CarDetail />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="/" element={<Navigate to="/dashboard" />} />
       </Routes>
     </BrowserRouter>

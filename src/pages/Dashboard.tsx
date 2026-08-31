@@ -1,30 +1,63 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom"; // 👈 Impor Link untuk navigasi
 import { useAuth } from "../hooks/useAuth";
-import { 
-  FiUser, 
-  FiMail, 
-  FiCalendar, 
-  FiLogOut, 
-  FiSettings,
-  FiBell,
-  FiGrid,
-  FiActivity,
-  FiTrendingUp,
-  FiUsers 
-} from "react-icons/fi";
+import { AppLayout } from "../layouts/AppLayout";
+import api from "../lib/axios";
+import { FiTruck, FiSearch } from "react-icons/fi";
+
+interface Car {
+  id: number;
+  name: string;
+  brand: string;
+  status: string;
+  seats: number;
+  year: number;
+  price_per_day: number;
+  image?: string;
+}
 
 const Dashboard: React.FC = () => {
   const { user, loading, logout } = useAuth();
+  const [allCars, setAllCars] = useState<Car[]>([]);
+  const [filteredCars, setFilteredCars] = useState<Car[]>([]);
+  const [loadingCars, setLoadingCars] = useState<boolean>(true);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  useEffect(() => {
+    const fetchCars = async () => {
+      try {
+        const response = await api.get("/api/cars");
+        if (response.data.status === "success") {
+          setAllCars(response.data.data);
+          setFilteredCars(response.data.data);
+        }
+      } catch (err) {
+        console.error("Gagal mengambil data mobil:", err);
+      } finally {
+        setLoadingCars(false);
+      }
+    };
+
+    fetchCars();
+  }, []);
+
+  const handleSearchFilter = (query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setFilteredCars(allCars);
+    } else {
+      const filtered = allCars.filter((car) => {
+        const name = (car.name || '').toLowerCase();
+        const brand = (car.brand || '').toLowerCase();
+        const q = query.toLowerCase();
+        return name.includes(q) || brand.includes(q);
+      });
+      setFilteredCars(filtered);
+    }
+  };
 
   if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Memuat dashboard...</p>
-        </div>
-      </div>
-    );
+    return <div className="min-h-screen bg-white" />;
   }
 
   if (!user) {
@@ -32,214 +65,106 @@ const Dashboard: React.FC = () => {
     return null;
   }
 
-  // Data statistik contoh
-  const stats = [
-    { label: 'Total Kunjungan', value: '1,234', icon: FiActivity, color: 'bg-blue-500', change: '+12%' },
-    { label: 'Aktivitas', value: '56', icon: FiTrendingUp, color: 'bg-green-500', change: '+23%' },
-    { label: 'Pengikut', value: '89', icon: FiUsers, color: 'bg-purple-500', change: '+5%' },
-  ];
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(price);
+  };
+
+  const getCarImageUrl = (imagePath?: string) => {
+    if (!imagePath) return '';
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    const cleanPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+    return `http://localhost:8000${cleanPath}`;
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Navbar yang lebih elegan */}
-      <nav className="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-10 border-b border-gray-200/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo dan Brand */}
-            <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-2 rounded-lg">
-                <FiGrid className="h-5 w-5 text-white" />
-              </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                Dashboard
-              </h1>
-            </div>
-            
-            {/* Right Side */}
-            <div className="flex items-center gap-4">
-              {/* Notifications */}
-              <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-all">
-                <FiBell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-              </button>
-
-              {/* Settings */}
-              <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-all">
-                <FiSettings className="h-5 w-5" />
-              </button>
-
-              {/* User Profile */}
-              <div className="flex items-center gap-3 border-l pl-4 border-gray-200">
-                <div className="relative">
-                  {user.avatar ? (
-                    <img
-                      src={user.avatar}
-                      alt={user.name}
-                      className="w-10 h-10 rounded-full object-cover border-2 border-blue-500"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white font-semibold">
-                      {user.name?.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-white"></span>
-                </div>
-                <div className="hidden md:block">
-                  <p className="text-sm font-semibold text-gray-700">{user.name}</p>
-                  <p className="text-xs text-gray-500">Online</p>
-                </div>
-              </div>
-              
-              {/* Logout Button */}
-              <button
-                onClick={logout}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-red-500 to-red-600 rounded-lg hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all shadow-md hover:shadow-lg"
-              >
-                <FiLogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Logout</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-800">
-            Selamat datang kembali, <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{user.name}!</span>
+    <AppLayout user={user} logout={logout} onSearchChange={handleSearchFilter}>
+      {/* Welcome Banner */}
+      <div className="mb-8 bg-gradient-to-r from-blue-600 to-blue-500 p-6 rounded-2xl text-white shadow-lg flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold">
+            Halo, {user.name}! 👋
           </h2>
-          <p className="text-gray-600 mt-1">Berikut adalah ringkasan aktivitas Anda hari ini.</p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <div key={index} className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all p-6 border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`${stat.color} p-3 rounded-lg bg-opacity-10`}>
-                  <stat.icon className={`h-6 w-6 text-${stat.color.replace('bg-', '')}`} />
-                </div>
-                <span className="text-sm font-semibold text-green-500 bg-green-100 px-2 py-1 rounded-full">
-                  {stat.change}
-                </span>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-800">{stat.value}</h3>
-              <p className="text-gray-600 text-sm">{stat.label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Profile Card */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Profile Info */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
-                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <FiUser className="h-5 w-5" />
-                  Informasi Profil
-                </h3>
-              </div>
-              
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
-                    <div className="bg-blue-100 p-3 rounded-lg">
-                      <FiMail className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Email</p>
-                      <p className="text-base font-semibold text-gray-800 break-all">{user.email}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
-                    <div className="bg-green-100 p-3 rounded-lg">
-                      <FiCalendar className="h-5 w-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Member Since</p>
-                      <p className="text-base font-semibold text-gray-800">
-                        {new Date(user.created_at).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric'
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Additional Info */}
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <h4 className="text-sm font-medium text-gray-500 mb-4">Informasi Tambahan</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-gray-500">Status Akun</p>
-                      <p className="text-sm font-semibold text-green-600">Aktif</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Role</p>
-                      <p className="text-sm font-semibold text-gray-700">User</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Aksi Cepat</h3>
-              
-              <div className="space-y-3">
-                <button className="w-full flex items-center gap-3 px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-all group">
-                  <FiSettings className="h-5 w-5 text-gray-500 group-hover:text-blue-600 transition-colors" />
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600">Pengaturan Profil</span>
-                </button>
-                
-                <button className="w-full flex items-center gap-3 px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-all group">
-                  <FiActivity className="h-5 w-5 text-gray-500 group-hover:text-blue-600 transition-colors" />
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600">Lihat Aktivitas</span>
-                </button>
-                
-                <button className="w-full flex items-center gap-3 px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-all group">
-                  <FiUsers className="h-5 w-5 text-gray-500 group-hover:text-blue-600 transition-colors" />
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600">Undang Teman</span>
-                </button>
-              </div>
-
-              {/* Recent Activity */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h4 className="text-sm font-medium text-gray-500 mb-3">Aktivitas Terkini</h4>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                    <p className="text-gray-600">Login terakhir hari ini</p>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
-                    <p className="text-gray-600">Profil diperbarui</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <p className="text-sm text-center text-gray-500">
-            © 2026 Dashboard. All rights reserved.
+          <p className="text-blue-100 text-sm mt-1">
+            Temukan mobil impian untuk perjalanan nyaman Anda hari ini.
           </p>
         </div>
-      </footer>
-    </div>
+        <div className="p-3 bg-white/15 rounded-full hidden sm:block">
+          <FiTruck size={28} className="text-white" />
+        </div>
+      </div>
+
+      {/* Daftar Mobil Section Header */}
+      <div className="mb-4 flex justify-between items-center">
+        <div>
+          <h3 className="text-base font-bold text-gray-800">Daftar Mobil Tersedia</h3>
+          {searchQuery && (
+            <p className="text-xs text-gray-500 italic mt-0.5">
+              Hasil pencarian untuk: "{searchQuery}"
+            </p>
+          )}
+        </div>
+        <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-semibold">
+          {filteredCars.length} Unit
+        </span>
+      </div>
+
+      {/* Grid List Mobil */}
+      {loadingCars ? (
+        <div className="text-center py-16 text-gray-400 text-sm">Memuat data mobil...</div>
+      ) : filteredCars.length === 0 ? (
+        <div className="text-center py-16 text-gray-400 bg-white rounded-xl border border-gray-100 text-sm">
+          <FiSearch size={32} className="mx-auto mb-2 opacity-40" />
+          {searchQuery ? 'Tidak ada mobil yang cocok dengan pencarian Anda.' : 'Belum ada mobil yang tersedia.'}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredCars.map((car) => (
+            // 👈 Bungkus Card dengan Link agar bisa diklik menuju halaman detail (mengirim parameter id)
+            <Link 
+              to={`/cars/${car.id}`} 
+              key={car.id} 
+              className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all flex flex-col justify-between group"
+            >
+              <div>
+                <div className="h-44 bg-gray-100 relative overflow-hidden">
+                  {car.image ? (
+                    <img 
+                      src={getCarImageUrl(car.image)} 
+                      alt={car.name} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      <FiTruck size={36} />
+                    </div>
+                  )}
+                  <span className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
+                    car.status === 'tersedia' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  }`}>
+                    {car.status}
+                  </span>
+                </div>
+                <div className="p-4">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{car.brand}</p>
+                  <h4 className="font-bold text-gray-800 text-sm mt-0.5 truncate group-hover:text-blue-600 transition-colors">{car.name}</h4>
+                  <div className="flex items-center gap-3 text-xs text-gray-500 mt-2">
+                    <span>💺 {car.seats} Kursi</span>
+                    <span>📅 {car.year}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 pt-0 flex items-center justify-between">
+                <span className="text-blue-600 font-bold text-sm">
+                  {formatPrice(car.price_per_day)} <span className="text-[11px] text-gray-400 font-normal">/ hari</span>
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </AppLayout>
   );
 };
 

@@ -18,6 +18,8 @@ const api = axios.create({
 export const getCsrfCookie = async () => {
   try {
     console.log('Fetching CSRF cookie...');
+    // Lakukan pemanggilan aktual ke endpoint sanctum Laravel
+    await api.get('/sanctum/csrf-cookie');
     console.log('CSRF cookie fetched successfully');
     return true;
   } catch (error) {
@@ -48,9 +50,22 @@ api.interceptors.response.use(
   }
 );
 
-// Request interceptor untuk debugging
+// Request interceptor untuk debugging & menyisipkan Bearer Token otomatis
 api.interceptors.request.use(
   config => {
+    // Ambil token yang dikirim via query URL Google OAuth dan simpan otomatis jika ada
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+    if (urlToken) {
+      localStorage.setItem('auth_token', urlToken);
+    }
+
+    // Sisipkan Bearer token dari localStorage jika tersedia
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
     console.log(`Making request to: ${config.url}`, {
       method: config.method,
       withCredentials: config.withCredentials,
