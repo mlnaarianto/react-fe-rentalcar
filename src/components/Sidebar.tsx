@@ -1,6 +1,16 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom"; // 👈 Impor Link dan useLocation
-import { FiUser, FiActivity, FiSettings, FiX, FiHome } from "react-icons/fi";
+import { Link, useLocation } from "react-router-dom";
+import { 
+  FiUser, 
+  FiX, 
+  FiHome, 
+  FiTruck, 
+  FiClock, 
+  FiClipboard, 
+  FiNavigation, 
+  FiMessageSquare 
+} from "react-icons/fi";
+import { useAuth } from "../hooks/useAuth";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -8,10 +18,24 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const location = useLocation(); // Untuk mendeteksi halaman aktif saat ini
-
-  // Helper untuk mengecek apakah link sedang aktif
+  const location = useLocation();
+  const { user } = useAuth();
+  
   const isActive = (path: string) => location.pathname === path;
+
+  // Deteksi role dari berbagai kemungkinan format struktur data API Laravel
+  const userRoleStr = typeof user?.role === 'string' ? user.role.toLowerCase() : '';
+  const userRolesArr = Array.isArray(user?.roles) 
+    ? user.roles.map((r: any) => (typeof r === 'string' ? r : r.name)?.toLowerCase()) 
+    : [];
+
+  const isDriver = userRoleStr === 'driver' || userRolesArr.includes('driver');
+  const isPerental = userRoleStr === 'perental' || userRolesArr.includes('perental');
+  const isSuperAdmin = userRoleStr === 'super_admin' || userRolesArr.includes('super_admin');
+
+  // ID Unik untuk Chat Admin (CS)
+  const userEmail = user?.email || "";
+  const uniqueChatId = `room_user_${userEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
   return (
     <>
@@ -29,9 +53,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0 md:w-0 md:overflow-hidden md:border-none"
         }`}
       >
-        <div>
+        <div className="flex flex-col h-full">
           {/* Logo / Brand Mobil & Tombol Close (Mobile) */}
-          <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100">
+          <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100 flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-[#2563EB]/10 flex items-center justify-center text-[#2563EB]">
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -47,21 +71,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             
             <button 
               onClick={onClose}
-              className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg md:hidden"
+              className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg md:hidden cursor-pointer"
             >
               <FiX className="h-5 w-5" />
             </button>
           </div>
 
-          {/* Menu Navigation Menggunakan React Router Link */}
-          <nav className="p-4 space-y-1.5">
+          {/* Menu Navigation */}
+          <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto">
+            
+            {/* Menu Utama Penyewa */}
             <Link 
               to="/dashboard" 
               onClick={onClose}
               className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all ${
-                isActive('/dashboard') 
-                  ? 'text-blue-600 bg-blue-50 font-semibold' 
-                  : 'text-gray-600 hover:bg-gray-50'
+                isActive('/dashboard') ? 'text-blue-600 bg-blue-50 font-semibold' : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
               <FiHome className="w-5 h-5" />
@@ -69,36 +93,95 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </Link>
 
             <Link 
+              to="/cars" 
+              onClick={onClose}
+              className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all ${
+                isActive('/cars') ? 'text-blue-600 bg-blue-50 font-semibold' : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <FiTruck className="h-5 w-5" />
+              Mobil
+            </Link>
+
+            <Link 
+              to="/history" 
+              onClick={onClose}
+              className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all ${
+                isActive('/history') ? 'text-blue-600 bg-blue-50 font-semibold' : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <FiClock className="h-5 w-5" />
+              Riwayat
+            </Link>
+
+            {/* BANTUAN / CHAT ADMIN */}
+            <div className="pt-4 pb-2">
+              <p className="px-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Bantuan</p>
+            </div>
+            
+            <Link 
+              to={`/chat?room=${uniqueChatId}&name=${encodeURIComponent("Admin Rental (CS)")}`}
+              onClick={onClose}
+              className="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50 transition-all"
+            >
+              <FiMessageSquare className="h-5 w-5 text-blue-600" />
+              Chat Admin (CS)
+            </Link>
+
+            {/* MENU KHUSUS DRIVER */}
+            {isDriver && (
+              <>
+                <div className="pt-4 pb-2">
+                  <p className="px-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Menu Driver</p>
+                </div>
+                <Link 
+                  to="/driver-bookings" 
+                  onClick={onClose}
+                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50 transition-all"
+                >
+                  <FiNavigation className="h-5 w-5 text-purple-600" />
+                  Tugas Penugasan
+                </Link>
+              </>
+            )}
+
+            {/* MANAJEMEN RENTAL (Perental / Super Admin) */}
+            {(isPerental || isSuperAdmin) && (
+              <>
+                <div className="pt-4 pb-2">
+                  <p className="px-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Manajemen Rental</p>
+                </div>
+                <Link 
+                  to="/rentals-bookings" 
+                  onClick={onClose}
+                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50 transition-all"
+                >
+                  <FiClipboard className="h-5 w-5 text-blue-600" />
+                  Kelola Pesanan & Driver
+                </Link>
+              </>
+            )}
+
+          </nav>
+
+          {/* Profil Saya di Bagian Paling Bawah */}
+          <div className="p-4 border-t border-gray-100 flex-shrink-0">
+            <Link 
               to="/profile" 
               onClick={onClose}
               className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all ${
-                isActive('/profile') 
-                  ? 'text-blue-600 bg-blue-50 font-semibold' 
-                  : 'text-gray-600 hover:bg-gray-50'
+                isActive('/profile') ? 'text-blue-600 bg-blue-50 font-semibold' : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
               <FiUser className="h-5 w-5" />
               Profil Saya
             </Link>
+          </div>
 
-            <a 
-              href="#activity" 
-              className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-xl transition-all"
-            >
-              <FiActivity className="h-5 w-5" />
-              Aktivitas
-            </a>
-            
-            <a 
-              href="#settings" 
-              className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-xl transition-all"
-            >
-              <FiSettings className="h-5 w-5" />
-              Pengaturan
-            </a>
-          </nav>
         </div>
       </aside>
     </>
   );
 };
+
+export default Sidebar;

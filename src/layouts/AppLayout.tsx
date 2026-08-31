@@ -6,6 +6,7 @@ import { Footer } from "../components/Footer";
 
 interface AppLayoutProps {
   user: {
+    id: number;         // 🟢 TAMBAHAN: dibutuhkan Navbar untuk channel real-time
     name?: string;
     email?: string;
     avatar?: string;

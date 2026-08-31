@@ -3,9 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "../layouts/AppLayout";
 import { useAuth } from "../hooks/useAuth";
 import api from "../lib/axios";
-import { 
-  FiArrowLeft, FiTruck, FiUser, FiSettings, 
-  FiFileText, FiCheckCircle, FiXCircle, FiPlayCircle 
+import {
+  FiArrowLeft, FiTruck, FiUser, FiSettings,
+  FiFileText, FiCheckCircle, FiXCircle, FiPlayCircle
 } from "react-icons/fi";
 
 interface Car {
@@ -37,7 +37,7 @@ const CarDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, loading: authLoading, logout } = useAuth();
-  
+
   const [car, setCar] = useState<Car | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -88,7 +88,7 @@ const CarDetail: React.FC = () => {
   // Helper aman tanpa package eksternal untuk handle YouTube iframe & Video File / Google Drive
   const renderVideoPlayer = (url: string) => {
     const youtubeMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
-    
+
     if (youtubeMatch && youtubeMatch[1]) {
       const videoId = youtubeMatch[1];
       return (
@@ -113,9 +113,9 @@ const CarDetail: React.FC = () => {
 
     return (
       <div className="relative w-full rounded-xl overflow-hidden bg-black shadow-inner">
-        <video 
-          src={videoSource} 
-          controls 
+        <video
+          src={videoSource}
+          controls
           className="w-full max-h-[400px] object-contain mx-auto"
         >
           Browser Anda tidak mendukung pemutar video ini.
@@ -129,7 +129,7 @@ const CarDetail: React.FC = () => {
       <AppLayout user={user} logout={logout}>
         <div className="text-center py-24 bg-white rounded-2xl shadow-sm border border-gray-100 p-8 max-w-lg mx-auto mt-10">
           <p className="text-red-500 font-semibold mb-4">{errorMessage || 'Mobil tidak ditemukan.'}</p>
-          <button 
+          <button
             onClick={() => navigate('/dashboard')}
             className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-all"
           >
@@ -149,19 +149,19 @@ const CarDetail: React.FC = () => {
       <div className="max-w-4xl mx-auto pb-12">
         {/* Tombol Kembali & Header Gambar */}
         <div className="mb-6">
-          <button 
+          <button
             onClick={() => navigate(-1)}
             className="inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-blue-600 bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-200 transition-all mb-4"
           >
             <FiArrowLeft size={16} /> Kembali
           </button>
 
-          {/* Banner Gambar Mobil */}
+          {/* Banner Gambar Mobil (polos, tanpa overlay teks) */}
           <div className="h-72 sm:h-96 w-full rounded-2xl overflow-hidden relative shadow-md bg-gray-100">
             {car.image ? (
-              <img 
-                src={getCarImageUrl(car.image)} 
-                alt={car.name} 
+              <img
+                src={getCarImageUrl(car.image)}
+                alt={car.name}
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -169,22 +169,30 @@ const CarDetail: React.FC = () => {
                 <FiTruck size={64} />
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-            <div className="absolute bottom-6 left-6 right-6">
-              <span className="px-3 py-1 bg-white/20 backdrop-blur-md text-white rounded-lg text-xs font-bold uppercase tracking-wider">
-                {car.brand}
-              </span>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white mt-1">{car.name}</h1>
-            </div>
           </div>
         </div>
 
         {/* Grid Informasi Utama */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Kolom Kiri: Harga, Spesifikasi, Video & Deskripsi */}
+
+          {/* Kolom Kiri: Nama Mobil, Harga, Spesifikasi, Video & Deskripsi */}
           <div className="lg:col-span-2 space-y-6">
-            
+
+            {/* Kartu Nama & Brand Mobil */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold uppercase tracking-wider">
+                  {car.brand}
+                </span>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mt-2">{car.name}</h1>
+              </div>
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase ${isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                }`}>
+                {isAvailable ? <FiCheckCircle size={12} /> : <FiXCircle size={12} />}
+                {car.status}
+              </span>
+            </div>
+
             {/* Kartu Harga */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap items-center justify-between gap-4">
               <div>
@@ -194,14 +202,6 @@ const CarDetail: React.FC = () => {
               <div className="border-l pl-4 border-gray-100">
                 <p className="text-xs text-gray-500">Jasa Driver / Hari</p>
                 <p className="text-xl font-bold text-orange-500 mt-0.5">{formatPrice(car.driver_price_per_day || 0)}</p>
-              </div>
-              <div className="w-full sm:w-auto">
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase ${
-                  isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                }`}>
-                  {isAvailable ? <FiCheckCircle size={12} /> : <FiXCircle size={12} />}
-                  {car.status}
-                </span>
               </div>
             </div>
 
@@ -285,12 +285,11 @@ const CarDetail: React.FC = () => {
               <div className="mt-6 pt-6 border-t border-gray-100">
                 <button
                   disabled={!isAvailable}
-                  onClick={() => alert('Fitur form pemesanan akan segera terhubung.')}
-                  className={`w-full py-3 rounded-xl font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2 ${
-                    isAvailable 
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20' 
+                  onClick={() => navigate(`/cars/${car.id}/book`, { state: { carData: car } })}
+                  className={`w-full py-3 rounded-xl font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2 ${isAvailable
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20 cursor-pointer'
                       : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  }`}
+                    }`}
                 >
                   <FiTruck size={18} />
                   {isAvailable ? 'Sewa Mobil Ini' : 'Mobil Sedang Tidak Tersedia'}
