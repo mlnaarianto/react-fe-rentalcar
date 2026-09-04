@@ -3,16 +3,16 @@ import Swal from "sweetalert2";
 import { useAuth } from "../hooks/useAuth";
 import { AppLayout } from "../layouts/AppLayout";
 import api from "../lib/axios";
-import { 
-  FiUser, 
-  FiMail, 
-  FiPhone, 
-  FiCalendar, 
-  FiShield, 
-  FiSave, 
-  FiCheckCircle, 
-  FiUploadCloud, 
-  FiCreditCard, 
+import {
+  FiUser,
+  FiMail,
+  FiPhone,
+  FiCalendar,
+  FiShield,
+  FiSave,
+  FiCheckCircle,
+  FiUploadCloud,
+  FiCreditCard,
   FiFileText,
   FiZoomIn,
   FiX,
@@ -21,7 +21,7 @@ import {
 
 const Profile: React.FC = () => {
   const { user, logout, fetchUser } = useAuth();
-  
+
   // State Form Utama
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -46,6 +46,9 @@ const Profile: React.FC = () => {
   // State untuk Modal Zoom Gambar Fullscreen
   const [zoomImage, setZoomImage] = useState<{ url: string; title: string } | null>(null);
 
+  // State untuk mendeteksi jika foto profil Google broken
+  const [avatarError, setAvatarError] = useState(false);
+
   // Sync state ketika data user berubah / termuat dari API
   useEffect(() => {
     if (user) {
@@ -56,7 +59,7 @@ const Profile: React.FC = () => {
       setPhone(personal.phone || "");
       setBirthDate(personal.birth_date ? personal.birth_date.split("T")[0] : "");
       setAddress(personal.address || "");
-      
+
       setSimNumber(personal.sim_number || "");
       setSimType(personal.sim_type || "");
       setSimExpiredDate(personal.sim_expired_date ? personal.sim_expired_date.split("T")[0] : "");
@@ -148,15 +151,19 @@ const Profile: React.FC = () => {
 
       <form onSubmit={handleUpdateProfile} className="space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Kolom Kiri: Kartu Ringkasan Akun & KTP */}
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-6 flex flex-col items-center text-center">
-              <div className="relative mb-4 group cursor-pointer" onClick={() => user.avatar && setZoomImage({ url: user.avatar, title: 'Foto Profil' })}>
-                {user.avatar ? (
+              <div 
+                className="relative mb-4 group cursor-pointer" 
+                onClick={() => user.avatar && !avatarError && setZoomImage({ url: user.avatar, title: 'Foto Profil' })}
+              >
+                {user.avatar && !avatarError ? (
                   <img
                     src={user.avatar}
                     alt={user.name}
+                    onError={() => setAvatarError(true)}
                     className="w-24 h-24 rounded-full object-cover border-4 border-blue-500 shadow-md transition-transform group-hover:scale-105"
                   />
                 ) : (
@@ -164,7 +171,7 @@ const Profile: React.FC = () => {
                     {user.name?.charAt(0).toUpperCase()}
                   </div>
                 )}
-                {user.avatar && (
+                {user.avatar && !avatarError && (
                   <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <FiZoomIn className="text-white h-6 w-6" />
                   </div>
@@ -203,13 +210,13 @@ const Profile: React.FC = () => {
                 )}
               </div>
               <p className="text-xs text-gray-500 mb-4">Wajib diupload, pastikan foto jelas dan tidak buram.</p>
-              
+
               <div className="relative border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-blue-500 transition-colors bg-gray-50">
                 {ktpPreview ? (
                   <div className="relative group">
-                    <img 
-                      src={ktpPreview} 
-                      alt="KTP Preview" 
+                    <img
+                      src={ktpPreview}
+                      alt="KTP Preview"
                       className="w-full h-36 object-cover rounded-lg mb-2 cursor-pointer"
                       onClick={() => setZoomImage({ url: ktpPreview, title: 'Foto KTP' })}
                     />
@@ -242,7 +249,7 @@ const Profile: React.FC = () => {
 
           {/* Kolom Kanan: Form Data Personal & SIM */}
           <div className="lg:col-span-2 space-y-6">
-            
+
             {/* Bagian Akun & Data Personal */}
             <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
               <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center gap-3 text-white">
@@ -257,9 +264,8 @@ const Profile: React.FC = () => {
                     <input
                       type="text"
                       value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                      className="w-full px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-800"
+                      disabled
+                      className="w-full px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-600 opacity-70 cursor-not-allowed"
                     />
                   </div>
                   <div>
@@ -366,9 +372,9 @@ const Profile: React.FC = () => {
                   <div className="relative border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-orange-500 transition-colors bg-gray-50">
                     {simPreview ? (
                       <div className="relative group">
-                        <img 
-                          src={simPreview} 
-                          alt="SIM Preview" 
+                        <img
+                          src={simPreview}
+                          alt="SIM Preview"
                           className="w-full h-40 object-cover rounded-lg mb-2 cursor-pointer"
                           onClick={() => setZoomImage({ url: simPreview, title: 'Foto SIM' })}
                         />
@@ -419,14 +425,14 @@ const Profile: React.FC = () => {
 
       {/* MODAL ZOOM / PREVIEW GAMBAR FULLSCREEN */}
       {zoomImage && (
-        <div 
+        <div
           className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 animate-fadeIn"
           onClick={() => setZoomImage(null)}
         >
           {/* Header Modal */}
           <div className="absolute top-4 left-6 right-6 flex justify-between items-center text-white">
             <span className="text-sm font-semibold tracking-wide">{zoomImage.title}</span>
-            <button 
+            <button
               onClick={() => setZoomImage(null)}
               className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
               title="Tutup"
@@ -437,9 +443,9 @@ const Profile: React.FC = () => {
 
           {/* Gambar yang Di-zoom */}
           <div className="relative max-w-4xl max-h-[80vh] overflow-auto flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-            <img 
-              src={zoomImage.url} 
-              alt={zoomImage.title} 
+            <img
+              src={zoomImage.url}
+              alt={zoomImage.title}
               className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl transition-transform duration-200 cursor-zoom-in hover:scale-105"
             />
           </div>

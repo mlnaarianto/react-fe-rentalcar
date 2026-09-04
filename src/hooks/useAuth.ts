@@ -6,7 +6,7 @@ interface User {
   name: string;
   email: string;
   avatar: string;
-  login_type?: string; 
+  login_type?: string;
   roles?: string[];
   permissions?: string[];
   created_at: string;
@@ -49,7 +49,9 @@ export const useAuth = () => {
   };
 
   const loginWithGoogle = () => {
-    window.location.href = "http://localhost:8000/api/auth/google";
+    // Route redirect Google OAuth sekarang didaftarkan di routes/web.php
+    // (bukan lagi routes/api.php), jadi TIDAK ada prefix "/api" di depannya.
+    window.location.href = "http://localhost:8000/auth/google";
   };
 
   const logout = async () => {

@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiSend, FiLock } from "react-icons/fi";
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  setDoc, 
-  query, 
-  orderBy, 
-  onSnapshot, 
-  serverTimestamp 
+import {
+  collection,
+  doc,
+  addDoc,
+  setDoc,
+  query,
+  orderBy,
+  onSnapshot,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../hooks/useAuth";
@@ -28,7 +28,7 @@ export const ChatPage: React.FC = () => {
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState<string>("");
   const [isLoadingMessages, setIsLoadingMessages] = useState<boolean>(true);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // ID & Nama User yang sedang login (aktif)
@@ -47,18 +47,22 @@ export const ChatPage: React.FC = () => {
     const messagesRef = collection(db, "chats", chatId, "messages");
     const q = query(messagesRef, orderBy("created_at", "asc"));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setMessages(msgs);
-      setIsLoadingMessages(false);
-      setTimeout(scrollToBottom, 100);
-    }, (error) => {
-      console.error("Gagal mengambil pesan real-time:", error);
-      setIsLoadingMessages(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const msgs = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setMessages(msgs);
+        setIsLoadingMessages(false);
+        setTimeout(scrollToBottom, 100);
+      },
+      (error) => {
+        console.error("Gagal mengambil pesan real-time:", error);
+        setIsLoadingMessages(false);
+      }
+    );
 
     return () => unsubscribe();
   }, [chatId]);
@@ -81,13 +85,16 @@ export const ChatPage: React.FC = () => {
       });
 
       // 2. Update dokumen utama room chat (last_message)
-      await setDoc(doc(db, "chats", chatId), {
-        last_message: messageText,
-        updated_at: serverTimestamp(),
-        last_sender_id: currentUserId,
-        last_sender_name: currentUserName,
-      }, { merge: true });
-
+      await setDoc(
+        doc(db, "chats", chatId),
+        {
+          last_message: messageText,
+          updated_at: serverTimestamp(),
+          last_sender_id: currentUserId,
+          last_sender_name: currentUserName,
+        },
+        { merge: true }
+      );
     } catch (err) {
       console.error("Gagal mengirim pesan:", err);
       alert("Pesan gagal terkirim. Periksa koneksi Anda.");
@@ -107,7 +114,7 @@ export const ChatPage: React.FC = () => {
   const formatTime = (timestamp: any) => {
     if (!timestamp || !timestamp.toDate) return "";
     const date = timestamp.toDate();
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
   };
 
   // Format Header Tanggal Pemisah Pesan
@@ -115,21 +122,23 @@ export const ChatPage: React.FC = () => {
     if (!timestamp || !timestamp.toDate) return "";
     const date = timestamp.toDate();
     const now = new Date();
-    
-    const isToday = date.getDate() === now.getDate() &&
-                    date.getMonth() === now.getMonth() &&
-                    date.getFullYear() === now.getFullYear();
+
+    const isToday =
+      date.getDate() === now.getDate() &&
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear();
 
     const yesterday = new Date();
     yesterday.setDate(now.getDate() - 1);
-    const isYesterday = date.getDate() === yesterday.getDate() &&
-                        date.getMonth() === yesterday.getMonth() &&
-                        date.getFullYear() === yesterday.getFullYear();
+    const isYesterday =
+      date.getDate() === yesterday.getDate() &&
+      date.getMonth() === yesterday.getMonth() &&
+      date.getFullYear() === yesterday.getFullYear();
 
     if (isToday) return "Hari ini";
     if (isYesterday) return "Kemarin";
 
-    return date.toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric' });
+    return date.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
   };
 
   if (authLoading) {
@@ -143,60 +152,64 @@ export const ChatPage: React.FC = () => {
 
   return (
     <AppLayout user={user} logout={logout}>
-      <div className="max-w-4xl mx-auto h-[calc(100vh-140px)] flex flex-col bg-gray-50 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        
-        {/* Header Chat */}
-        <div className="bg-blue-600 px-6 py-4 flex items-center gap-3 text-white shadow-sm">
-          <button 
-            onClick={() => navigate(-1)} 
-            className="p-2 hover:bg-blue-700 rounded-xl transition-all cursor-pointer"
+      {/* Page header — dibungkus card putih (senada dengan card mobil di
+          Dashboard) supaya jelas ini konten halaman, bukan lanjutan navbar */}
+      <div className="mb-6 bg-white rounded-xl border border-gray-100 shadow-sm px-4 sm:px-5 py-3.5 flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            onClick={() => navigate(-1)}
+            aria-label="Kembali"
+            className="p-2 -ml-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors cursor-pointer shrink-0"
           >
-            <FiArrowLeft size={20} />
+            <FiArrowLeft size={18} />
           </button>
 
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center overflow-hidden font-bold text-sm">
+          <div className="relative w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center overflow-hidden font-semibold text-xs shrink-0">
             {receiverAvatarUrl ? (
               <img src={receiverAvatarUrl} alt={receiverName} className="w-full h-full object-cover" />
             ) : (
               getInitials(receiverName)
             )}
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white" />
           </div>
 
-          <div className="flex-1 min-w-0">
-            <h2 className="font-bold text-base truncate">{receiverName}</h2>
-            <p className="text-[11px] text-blue-100 flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-green-400 inline-block animate-pulse"></span> Online (Terhubung aman)
-            </p>
+          <div className="min-w-0">
+            <h3 className="text-base font-bold text-gray-800 leading-tight truncate">{receiverName}</h3>
+            <p className="text-xs text-emerald-600 leading-tight">Online</p>
           </div>
         </div>
 
-        {/* Ruang Pesan (Body Chat) */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 bg-[#F4F6F9]">
-          {isLoadingMessages ? (
-            <div className="flex justify-center items-center h-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center px-4">
-              <div className="p-4 bg-blue-50 text-blue-600 rounded-full mb-3 shadow-sm">
-                <FiLock size={24} />
-              </div>
-              <p className="text-gray-700 font-semibold text-sm">Pesan aman dan terenkripsi</p>
-              <p className="text-gray-400 text-xs mt-1 max-w-xs">
-                Silakan mulai percakapan terkait penyewaan kendaraan dengan {receiverName}.
-              </p>
-            </div>
-          ) : (
-            messages.map((msg, index) => {
+        <span className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-semibold shrink-0">
+          <FiLock size={11} /> Terenkripsi
+        </span>
+      </div>
+
+      {/* Ruang Pesan — langsung menyatu dengan halaman, tanpa border/box besar */}
+      <div className="min-h-[45vh] pb-28">
+        {isLoadingMessages ? (
+          <div className="flex justify-center py-16">
+            <div className="animate-spin rounded-full h-7 w-7 border-2 border-gray-200 border-t-blue-600" />
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="text-center py-16 text-gray-400 bg-white rounded-xl border border-gray-100 text-sm">
+            <FiLock size={32} className="mx-auto mb-2 opacity-40" />
+            <p className="text-gray-700 font-medium text-sm">Pesan aman dan terenkripsi</p>
+            <p className="text-gray-400 text-xs mt-1">
+              Mulai percakapan terkait penyewaan kendaraan dengan {receiverName}.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {messages.map((msg, index) => {
               const isMe = String(msg.sender_id) === currentUserId;
-              
+
               let showDateSeparator = false;
               if (msg.created_at) {
                 if (index === 0) {
                   showDateSeparator = true;
                 } else {
                   const prevMsg = messages[index - 1];
-                  if (prevMsg.created_at && prevMsg.created_at.toDate && msg.created_at.toDate) {
+                  if (prevMsg.created_at?.toDate && msg.created_at?.toDate) {
                     const prevDate = prevMsg.created_at.toDate();
                     const currDate = msg.created_at.toDate();
                     showDateSeparator = prevDate.toDateString() !== currDate.toDateString();
@@ -207,53 +220,61 @@ export const ChatPage: React.FC = () => {
               return (
                 <React.Fragment key={msg.id || index}>
                   {showDateSeparator && msg.created_at && (
-                    <div className="flex justify-center my-3">
-                      <span className="px-3 py-1 bg-white shadow-sm border border-gray-100 rounded-full text-[11px] font-semibold text-gray-500">
+                    <div className="flex justify-center my-4">
+                      <span className="px-3 py-1 bg-gray-100 rounded-full text-[11px] font-medium text-gray-500">
                         {formatDateSeparator(msg.created_at)}
                       </span>
                     </div>
                   )}
 
                   <div className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-                    <div 
-                      className={`max-w-[75%] sm:max-w-[60%] rounded-2xl px-4 py-3 shadow-sm relative space-y-1 ${
-                        isMe 
-                          ? "bg-[#DCEBFF] text-gray-900 rounded-br-none" 
-                          : "bg-white text-gray-900 rounded-bl-none border border-gray-100"
+                    <div
+                      className={`max-w-[85%] sm:max-w-[55%] rounded-2xl px-4 py-2.5 space-y-1 ${
+                        isMe
+                          ? "bg-blue-600 text-white rounded-br-md"
+                          : "bg-white text-gray-900 rounded-bl-md border border-gray-100 shadow-sm"
                       }`}
                     >
                       <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
-                      <div className={`flex items-center gap-1 text-[10px] text-gray-400 ${isMe ? "justify-end" : "justify-start"}`}>
-                        <span>{formatTime(msg.created_at)}</span>
+                      <div
+                        className={`text-[10px] ${
+                          isMe ? "text-blue-100 text-right" : "text-gray-400 text-left"
+                        }`}
+                      >
+                        {formatTime(msg.created_at)}
                       </div>
                     </div>
                   </div>
                 </React.Fragment>
               );
-            })
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Form Input Pesan (Footer Chat) */}
-        <form onSubmit={handleSendMessage} className="bg-white p-3 sm:p-4 border-t border-gray-100 flex items-center gap-3">
-          <input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder="Ketik pesan..."
-            className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-800"
-          />
-          <button
-            type="submit"
-            disabled={!inputText.trim()}
-            className="p-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-2xl transition-all shadow-sm flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
-          >
-            <FiSend size={18} />
-          </button>
-        </form>
-
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
       </div>
+
+      {/* Kotak balas pesan — menempel di bawah area konten (bukan floating card
+          terpisah), tetap terlihat saat scroll berkat sticky positioning */}
+      <form
+        onSubmit={handleSendMessage}
+        className="sticky bottom-4 sm:bottom-6 bg-white p-2.5 rounded-2xl border border-gray-200 shadow-md flex items-center gap-2"
+      >
+        <input
+          type="text"
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          placeholder="Ketik pesan..."
+          className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-800"
+        />
+        <button
+          type="submit"
+          disabled={!inputText.trim()}
+          aria-label="Kirim pesan"
+          className="w-10 h-10 shrink-0 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-full transition-colors flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
+        >
+          <FiSend size={16} />
+        </button>
+      </form>
     </AppLayout>
   );
 };

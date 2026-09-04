@@ -2,11 +2,11 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FiMenu, FiBell, FiLogOut, FiUser, FiChevronDown, FiSearch, FiX, FiAward } from "react-icons/fi";
 import api from "../lib/axios";
-import echo from "../lib/echo"; // 🟢 TAMBAHAN: koneksi real-time Reverb
+import echo from "../lib/echo"; // 🟢 Koneksi real-time Reverb
 
 interface NavbarProps {
   user: {
-    id: number;          // 🟢 TAMBAHAN: dibutuhkan untuk channel notifikasi
+    id: number;           // 🟢 Dibutuhkan untuk channel notifikasi
     name?: string;
     email?: string;
     avatar?: string;
@@ -21,6 +21,10 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onToggleSidebar, logout, o
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [hasNewNotifications, setHasNewNotifications] = useState(false);
+  
+  // 🟢 TAMBAHAN: State untuk mendeteksi jika foto profil gagal dimuat (broken image dari Google)
+  const [imgError, setImgError] = useState(false);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
 
@@ -32,7 +36,6 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onToggleSidebar, logout, o
     try {
       const response = await api.get("/api/notifications");
       const notifications = response.data.data || [];
-      // Cek apakah ada yang is_read-nya false
       const hasUnread = notifications.some((notif: any) => notif.is_read === false);
       setHasNewNotifications(hasUnread);
     } catch (_) {
@@ -42,12 +45,9 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onToggleSidebar, logout, o
 
   useEffect(() => {
     checkNotificationStatus();
-  }, [location.pathname]); // Refresh status setiap pindah halaman atau kembali dari notifikasi
+  }, [location.pathname]);
 
-  // 🟢 TAMBAHAN: Listener real-time — badge langsung nyala begitu ada
-  // notifikasi baru masuk dari Reverb, tanpa perlu pindah halaman dulu.
-  // Ini pelengkap checkNotificationStatus() di atas (yang tetap jadi
-  // fallback kalau koneksi WebSocket sempat putus).
+  // Listener real-time untuk Reverb
   useEffect(() => {
     if (!user?.id) return;
 
@@ -156,12 +156,11 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onToggleSidebar, logout, o
           <div className="flex items-center gap-3">
             <Link 
               to="/notifications" 
-              onClick={() => setHasNewNotifications(false)} // Langsung hilangkan titik merah saat diklik
+              onClick={() => setHasNewNotifications(false)}
               className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-all flex items-center justify-center"
               title="Notifikasi"
             >
               <FiBell className="h-5 w-5" />
-              {/* Titik Indikator Merah (Hanya muncul jika ada unread) */}
               {hasNewNotifications && (
                 <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white"></span>
               )}
@@ -174,10 +173,12 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onToggleSidebar, logout, o
                 className="flex items-center gap-3 focus:outline-none group py-1 rounded-xl px-2 hover:bg-gray-50 transition-all"
               >
                 <div className="relative">
-                  {user.avatar ? (
+                  {/* 🟢 MODIFIKASI: Ditambahkan pengecekan !imgError dan event onError */}
+                  {user.avatar && !imgError ? (
                     <img
                       src={user.avatar}
                       alt={user.name}
+                      onError={() => setImgError(true)}
                       className="w-10 h-10 rounded-full object-cover border-2 border-blue-500"
                     />
                   ) : (

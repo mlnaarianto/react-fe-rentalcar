@@ -5,8 +5,25 @@ import { useAuth } from "../hooks/useAuth";
 import api from "../lib/axios";
 import {
   FiArrowLeft, FiTruck, FiUser, FiSettings,
-  FiFileText, FiCheckCircle, FiXCircle, FiPlayCircle
+  FiFileText, FiCheckCircle, FiXCircle, FiPlayCircle,
+  FiMapPin, FiMap, FiExternalLink, FiCopy, FiCheck,
+  FiZoomIn, FiX
 } from "react-icons/fi";
+import { MapContainer, TileLayer, Marker, Popup, ZoomControl } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+// Fix icon marker Leaflet bawaan agar tampil sempurna di React
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+});
 
 interface Car {
   id: number;
@@ -30,6 +47,13 @@ interface Car {
       phone?: string;
       address?: string;
     };
+    rental_application?: {
+      business_name?: string;
+      formatted_address?: string;
+      business_address?: string;
+      latitude?: string | number;
+      longitude?: string | number;
+    };
   };
 }
 
@@ -41,6 +65,10 @@ const CarDetail: React.FC = () => {
   const [car, setCar] = useState<Car | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [addressCopied, setAddressCopied] = useState<boolean>(false);
+
+  // State untuk Modal Zoom Gambar Fullscreen
+  const [zoomImage, setZoomImage] = useState<{ url: string; title: string } | null>(null);
 
   useEffect(() => {
     const fetchCarDetail = async () => {
@@ -144,6 +172,47 @@ const CarDetail: React.FC = () => {
   const personalData = owner?.personal_data;
   const isAvailable = car.status === 'tersedia';
 
+  // ============ DATA LOKASI USAHA (dari relasi user.rental_application) ============
+  const rentalApplication = owner?.rental_application;
+  const businessName = rentalApplication?.business_name?.toString() || "";
+  const businessAddress =
+    rentalApplication?.formatted_address?.toString() ||
+    rentalApplication?.business_address?.toString() ||
+    "";
+  const businessLat =
+    rentalApplication?.latitude !== undefined && rentalApplication?.latitude !== null
+      ? Number(rentalApplication.latitude)
+      : null;
+  const businessLng =
+    rentalApplication?.longitude !== undefined && rentalApplication?.longitude !== null
+      ? Number(rentalApplication.longitude)
+      : null;
+  const hasLocation =
+    businessLat !== null && businessLng !== null && !isNaN(businessLat) && !isNaN(businessLng);
+
+  const openInGoogleMaps = () => {
+    if (!hasLocation) return;
+    const url = `https://www.google.com/maps/search/?api=1&query=${businessLat},${businessLng}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const openDirections = () => {
+    if (!hasLocation) return;
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${businessLat},${businessLng}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleCopyAddress = async () => {
+    if (!businessAddress) return;
+    try {
+      await navigator.clipboard.writeText(businessAddress);
+      setAddressCopied(true);
+      setTimeout(() => setAddressCopied(false), 2000);
+    } catch (err) {
+      console.error("Gagal menyalin alamat:", err);
+    }
+  };
+
   return (
     <AppLayout user={user} logout={logout}>
       <div className="max-w-4xl mx-auto pb-12">
@@ -156,14 +225,25 @@ const CarDetail: React.FC = () => {
             <FiArrowLeft size={16} /> Kembali
           </button>
 
-          {/* Banner Gambar Mobil (polos, tanpa overlay teks) */}
-          <div className="h-72 sm:h-96 w-full rounded-2xl overflow-hidden relative shadow-md bg-gray-100">
+          {/* Banner Gambar Mobil dengan Fitur Zoom */}
+          <div className="h-72 sm:h-96 w-full rounded-2xl overflow-hidden relative shadow-md bg-gray-100 group">
             {car.image ? (
-              <img
-                src={getCarImageUrl(car.image)}
-                alt={car.name}
-                className="w-full h-full object-cover"
-              />
+              <div 
+                className="w-full h-full cursor-zoom-in relative"
+                onClick={() => setZoomImage({ url: getCarImageUrl(car.image), title: car.name })}
+              >
+                <img
+                  src={getCarImageUrl(car.image)}
+                  alt={car.name}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                {/* Overlay Ikon Zoom saat Hover */}
+                <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="bg-black/60 text-white px-4 py-2 rounded-xl flex items-center gap-2 backdrop-blur-sm text-sm font-medium shadow-lg">
+                    <FiZoomIn size={18} /> Perbesar Foto
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-400">
                 <FiTruck size={64} />
@@ -186,8 +266,7 @@ const CarDetail: React.FC = () => {
                 </span>
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mt-2">{car.name}</h1>
               </div>
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase ${isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                }`}>
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase ${isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                 {isAvailable ? <FiCheckCircle size={12} /> : <FiXCircle size={12} />}
                 {car.status}
               </span>
@@ -233,6 +312,97 @@ const CarDetail: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Lokasi Usaha (Peta) */}
+            {(hasLocation || businessName || businessAddress) && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-6 pb-4">
+                  <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                    <FiMap className="text-orange-500" /> Lokasi Usaha
+                  </h3>
+                  {businessName && (
+                    <p className="text-xs text-gray-500 mt-1">{businessName}</p>
+                  )}
+                </div>
+
+                {hasLocation && (
+                  <div className="relative h-[320px] w-full border-y border-gray-100 group">
+                    <MapContainer
+                      key={`${businessLat}-${businessLng}`}
+                      center={[businessLat as number, businessLng as number]}
+                      zoom={16}
+                      zoomControl={false}
+                      scrollWheelZoom={true}
+                      style={{ height: "100%", width: "100%" }}
+                      className="z-0"
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      <ZoomControl position="bottomright" />
+                      <Marker position={[businessLat as number, businessLng as number]}>
+                        <Popup>
+                          <div className="text-xs">
+                            <p className="font-bold text-gray-800">
+                              {businessName || "Lokasi Usaha"}
+                            </p>
+                            {businessAddress && (
+                              <p className="text-gray-600 mt-1">{businessAddress}</p>
+                            )}
+                          </div>
+                        </Popup>
+                      </Marker>
+                    </MapContainer>
+
+                    {/* Tombol melayang di atas peta */}
+                    <div className="absolute top-3 left-3 z-[400] flex gap-2">
+                      <button
+                        onClick={openInGoogleMaps}
+                        className="inline-flex items-center gap-1.5 bg-white/95 backdrop-blur px-3 py-2 rounded-lg shadow-md text-xs font-semibold text-gray-700 hover:bg-white hover:text-blue-600 transition-all border border-gray-200"
+                      >
+                        <FiExternalLink size={13} /> Google Maps
+                      </button>
+                      <button
+                        onClick={openDirections}
+                        className="inline-flex items-center gap-1.5 bg-blue-600 px-3 py-2 rounded-lg shadow-md text-xs font-semibold text-white hover:bg-blue-700 transition-all"
+                      >
+                        <FiTruck size={13} /> Rute
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {(businessAddress || hasLocation) && (
+                  <div className="p-6 pt-4">
+                    {businessAddress && (
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-2">
+                          <FiMapPin className="mt-0.5 text-gray-400 flex-shrink-0" size={15} />
+                          <div>
+                            <p className="text-[11px] text-gray-400">Alamat Usaha</p>
+                            <p className="text-sm font-semibold text-gray-800 mt-0.5">
+                              {businessAddress}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={handleCopyAddress}
+                          title="Salin alamat"
+                          className="flex-shrink-0 p-2 rounded-lg border border-gray-200 text-gray-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all"
+                        >
+                          {addressCopied ? (
+                            <FiCheck size={14} className="text-green-600" />
+                          ) : (
+                            <FiCopy size={14} />
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Video Review Kendaraan */}
             {car.video_url && (
@@ -286,10 +456,11 @@ const CarDetail: React.FC = () => {
                 <button
                   disabled={!isAvailable}
                   onClick={() => navigate(`/cars/${car.id}/book`, { state: { carData: car } })}
-                  className={`w-full py-3 rounded-xl font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2 ${isAvailable
+                  className={`w-full py-3 rounded-xl font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2 ${
+                    isAvailable
                       ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20 cursor-pointer'
                       : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    }`}
+                  }`}
                 >
                   <FiTruck size={18} />
                   {isAvailable ? 'Sewa Mobil Ini' : 'Mobil Sedang Tidak Tersedia'}
@@ -300,6 +471,39 @@ const CarDetail: React.FC = () => {
 
         </div>
       </div>
+
+      {/* MODAL ZOOM / PREVIEW GAMBAR FULLSCREEN */}
+      {zoomImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex flex-col items-center justify-center p-4"
+          onClick={() => setZoomImage(null)}
+        >
+          {/* Header Modal */}
+          <div className="absolute top-4 left-6 right-6 flex justify-between items-center text-white z-10">
+            <span className="text-sm font-semibold tracking-wide">{zoomImage.title}</span>
+            <button
+              onClick={() => setZoomImage(null)}
+              className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+              title="Tutup"
+            >
+              <FiX size={20} />
+            </button>
+          </div>
+
+          {/* Gambar yang Di-zoom */}
+          <div 
+            className="relative max-w-5xl max-h-[85vh] overflow-auto flex items-center justify-center p-2" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={zoomImage.url}
+              alt={zoomImage.title}
+              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl transition-transform duration-200"
+            />
+          </div>
+          <p className="text-white/60 text-xs mt-4">Klik di luar gambar atau tombol X untuk keluar</p>
+        </div>
+      )}
     </AppLayout>
   );
 };
